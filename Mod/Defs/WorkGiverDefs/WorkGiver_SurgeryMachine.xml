@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <WorkGiverDef>
+    <defName>RHK_CarryToSurgeryMachine</defName>
+    <label>carry to surgery machine</label>
+    <giverClass>RedHotKomet.SurgeryMachine.WorkGiver_CarryToSurgeryMachine</giverClass>
+
+    <workType>Hauling</workType>
+    <priorityInType>90</priorityInType>
+
+    <verb>carry</verb>
+    <gerund>carrying to surgery machine</gerund>
+
+    <scanThings>true</scanThings>
+  </WorkGiverDef>
+
+</Defs>

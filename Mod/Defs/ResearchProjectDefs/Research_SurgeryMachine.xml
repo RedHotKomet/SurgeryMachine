@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <ResearchProjectDef>
+    <defName>RHK_SurgeryMachine_Research</defName>
+    <label>surgery machine</label>
+    <description>Unlocks the Surgery Machine.</description>
+
+    <baseCost>2500</baseCost>
+    <techLevel>Spacer</techLevel>
+
+    <prerequisites>
+      <li>HospitalBed</li>
+      <li>MicroelectronicsBasics</li>
+      <li>SterileMaterials</li>
+    </prerequisites>
+  </ResearchProjectDef>
+
+</Defs>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <JobDef>
+    <defName>RHK_EnterSurgeryMachine</defName>
+    <driverClass>RedHotKomet.SurgeryMachine.JobDriver_EnterSurgeryMachine</driverClass>
+    <reportString>entering surgery machine.</reportString>
+
+    <playerInterruptible>true</playerInterruptible>
+    <casualInterruptible>false</casualInterruptible>
+    <checkOverrideOnDamage>Always</checkOverrideOnDamage>
+  </JobDef>
+
+  <JobDef>
+    <defName>RHK_CarryToSurgeryMachine</defName>
+    <driverClass>RedHotKomet.SurgeryMachine.JobDriver_CarryToSurgeryMachine</driverClass>
+    <reportString>carrying patient to surgery machine.</reportString>
+
+    <playerInterruptible>true</playerInterruptible>
+    <casualInterruptible>false</casualInterruptible>
+    <checkOverrideOnDamage>Always</checkOverrideOnDamage>
+  </JobDef>
+
+  <JobDef>
+    <defName>RHK_InsertCarriedThingIntoSurgeryMachine</defName>
+    <driverClass>RedHotKomet.SurgeryMachine.JobDriver_InsertCarriedThingIntoSurgeryMachine</driverClass>
+    <reportString>loading item into surgery machine.</reportString>
+
+    <playerInterruptible>true</playerInterruptible>
+    <casualInterruptible>false</casualInterruptible>
+    <checkOverrideOnDamage>Always</checkOverrideOnDamage>
+  </JobDef>
+
+</Defs>

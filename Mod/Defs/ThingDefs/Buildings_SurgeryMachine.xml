@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <!-- Minified item -->
+  <ThingDef ParentName="MinifiedThing">
+    <defName>RHK_SurgeryMachine_Minified</defName>
+    <label>minified surgery machine</label>
+
+    <thingCategories>
+      <li>BuildingsFurniture</li>
+    </thingCategories>
+
+    <statBases>
+      <Mass>80</Mass>
+    </statBases>
+  </ThingDef>
+
+  <!-- Building -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>RHK_SurgeryMachine</defName>
+    <label>surgery machine</label>
+    <description>A premium medical machine that can treat and operate on pawns.</description>
+
+    <thingClass>RedHotKomet.SurgeryMachine.Building_SurgeryMachine</thingClass>
+    <category>Building</category>
+
+    <thingCategories>
+      <li>BuildingsFurniture</li>
+    </thingCategories>
+
+    <designationCategory>Furniture</designationCategory>
+    <uiOrder>1551</uiOrder>
+
+    <drawerType>MapMeshAndRealTime</drawerType>
+    <drawGUIOverlay>true</drawGUIOverlay>
+    <size>(3,2)</size>
+    <rotatable>true</rotatable>
+    <defaultPlacingRot>North</defaultPlacingRot>
+
+    <hasInteractionCell>true</hasInteractionCell>
+    <interactionCellOffset>(0,0,-1)</interactionCellOffset>
+
+    <placeWorkers>
+      <li>PlaceWorker_PreventInteractionSpotOverlap</li>
+    </placeWorkers>
+
+    <containedPawnsSelectable>true</containedPawnsSelectable>
+
+    <graphicData>
+      <texPath>Things/Building/SurgeryMachine/SurgeryMachine</texPath>
+      <graphicClass>Graphic_Multi</graphicClass>
+      <drawSize>(5,4)</drawSize>
+      <shadowData>
+        <volume>(3, 2, 1.9)</volume>
+      </shadowData>
+    </graphicData>
+
+    <altitudeLayer>Building</altitudeLayer>
+    <fillPercent>1</fillPercent>
+    <passability>PassThroughOnly</passability>
+
+    <building>
+      <isEdifice>true</isEdifice>
+    </building>
+
+    <minifiedDef>RHK_SurgeryMachine_Minified</minifiedDef>
+
+    <costList>
+      <Steel>550</Steel>
+      <Plasteel>200</Plasteel>
+      <Silver>800</Silver>
+      <ComponentIndustrial>12</ComponentIndustrial>
+      <ComponentSpacer>4</ComponentSpacer>
+    </costList>
+
+    <statBases>
+      <SellPriceFactor>0.70</SellPriceFactor>
+      <WorkToBuild>9000</WorkToBuild>
+      <Mass>80</Mass>
+    </statBases>
+
+    <researchPrerequisites>
+      <li>RHK_SurgeryMachine_Research</li>
+    </researchPrerequisites>
+
+    <!-- Items tab -->
+    <inspectorTabs>
+      <li>RedHotKomet.SurgeryMachine.ITab_SurgeryMachineItems</li>
+    </inspectorTabs>
+
+    <comps>
+      <li Class="CompProperties_Power">
+        <compClass>CompPowerTrader</compClass>
+        <basePowerConsumption>1200</basePowerConsumption>
+      </li>
+
+      <li Class="CompProperties_Flickable"/>
+
+      <li Class="RedHotKomet.SurgeryMachine.CompProperties_SurgeryMachineInventory">
+        <maxItemStacks>30</maxItemStacks>
+      </li>
+    </comps>
+
+
+  </ThingDef>
+
+</Defs>
