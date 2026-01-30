@@ -70,4 +70,12 @@
     <Compile Include="WorkGiver_CarryToSurgeryMachine.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if not exist "$(ProjectDir)Mod\Assemblies" mkdir "$(ProjectDir)Mod\Assemblies"
+
+del /Q "$(ProjectDir)Mod\Assemblies\*.dll"
+
+copy /Y "$(TargetDir)$(TargetFileName)" "$(ProjectDir)Mod\Assemblies\"
+</PostBuildEvent>
+  </PropertyGroup>
 </Project>

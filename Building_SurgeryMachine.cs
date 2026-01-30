@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -10,8 +9,6 @@ namespace RedHotKomet.SurgeryMachine
 {
     public class Building_SurgeryMachine : Building, IThingHolder
     {
-        private bool addedStasisHediffToPawn;
-
         private ThingOwner<Pawn> pawnContainer;
 
         private CompPowerTrader PowerComp => this.TryGetComp<CompPowerTrader>();
@@ -29,6 +26,12 @@ namespace RedHotKomet.SurgeryMachine
                 return hasPower && isOn;
             }
         }
+
+        // --- “Soft stasis” tuning ---
+        // Hunger tikt door, rest/joy pauze, health ticks pauze.
+        private const int HungerIntervalTicks = 150;           // vanilla-ish interval
+        private const float MalnutritionPerInterval = 0.0125f; // voelt “logisch”, kan je later tunen
+        private HediffDef cachedMalnutritionDef;
 
         public Building_SurgeryMachine()
         {
@@ -48,16 +51,6 @@ namespace RedHotKomet.SurgeryMachine
         {
             base.ExposeData();
             Scribe_Deep.Look(ref pawnContainer, "pawnContainer", this);
-            if (Scribe.mode == LoadSaveMode.PostLoadInit)
-            {
-                // Als we denken dat we stasis added hebben maar er is geen pawn meer: reset flag
-                if (addedStasisHediffToPawn && PawnInside == null)
-                {
-                    addedStasisHediffToPawn = false;
-                }
-            }
-
-            Scribe_Values.Look(ref addedStasisHediffToPawn, "addedStasisHediffToPawn", false);
 
             if (pawnContainer == null)
                 pawnContainer = new ThingOwner<Pawn>(this, oneStackOnly: true);
@@ -85,34 +78,18 @@ namespace RedHotKomet.SurgeryMachine
             if (pawn == null) return false;
             if (PawnInside != null) return false;
 
+            // Despawn -> contained (vanilla-style container occupant)
             if (pawn.Spawned)
                 pawn.DeSpawn();
 
-            // Stasis toepassen zodat hediffs “pauzeren” zoals cryptosleep/biosculpter feel.
-            ApplyStasisIfNeeded(pawn);
-
             bool ok = pawnContainer.TryAdd(pawn, canMergeWithExistingStacks: false);
-
-            if (!ok)
-            {
-                // Fail-safe: haal stasis weg als we hem niet echt konden opslaan
-                RemoveStasisIfWeAddedIt(pawn);
-            }
-
             return ok;
         }
-
 
         // Altijd toegestaan
         public void EjectPawn()
         {
             if (pawnContainer == null || pawnContainer.Count == 0) return;
-
-            Pawn p = PawnInside;
-            if (p != null)
-            {
-                RemoveStasisIfWeAddedIt(p);
-            }
 
             IntVec3 dropSpot = this.InteractionCell;
             if (!dropSpot.InBounds(this.Map) || !dropSpot.Standable(this.Map))
@@ -121,6 +98,80 @@ namespace RedHotKomet.SurgeryMachine
             pawnContainer.TryDropAll(dropSpot, this.Map, ThingPlaceMode.Near);
         }
 
+        // --- Soft stasis tick: health pauze, hunger door ---
+        protected override void Tick()
+        {
+            base.Tick();
+
+            Pawn p = PawnInside;
+            if (p == null) return;
+
+            // Stasis blijft actief zelfs zonder power (zoals je vroeg),
+            // dus we checken CanOperateNow hier NIET.
+
+            // Hunger interval tick
+            if (this.IsHashIntervalTick(HungerIntervalTicks))
+            {
+                TickHungerOnly(p);
+            }
+        }
+
+        private void TickHungerOnly(Pawn p)
+        {
+            if (p == null || p.Dead) return;
+
+            // Alleen food need laten lopen (rest/joy pauze)
+            Need_Food food = p.needs?.food;
+            if (food == null) return;
+
+            // Vanilla cadence: NeedInterval
+            food.NeedInterval();
+
+            // Als hunger op is: bouw malnutrition op (health ticks zijn gepauzeerd)
+            if (food.CurLevel <= 0.0001f)
+            {
+                HediffDef malDef = GetMalnutritionDef();
+                if (malDef != null)
+                {
+                    HealthUtility.AdjustSeverity(p, malDef, MalnutritionPerInterval);
+
+                    Hediff mal = p.health?.hediffSet?.GetFirstHediffOfDef(malDef);
+                    if (mal != null && mal.Severity >= 1.0f)
+                    {
+                        // Sterven netjes afhandelen: spawn pawn op map -> Kill -> corpse verschijnt correct
+                        SpawnPawnForDeath(p);
+                        p.Kill(null);
+                    }
+                }
+            }
+        }
+
+        private HediffDef GetMalnutritionDef()
+        {
+            if (cachedMalnutritionDef != null) return cachedMalnutritionDef;
+
+            // Prefer DefOf (best), maar fallback via name (safe)
+            cachedMalnutritionDef = HediffDefOf.Malnutrition
+                ?? DefDatabase<HediffDef>.GetNamedSilentFail("Malnutrition");
+
+            return cachedMalnutritionDef;
+        }
+
+        private void SpawnPawnForDeath(Pawn p)
+        {
+            if (p == null) return;
+
+            if (pawnContainer != null && pawnContainer.Contains(p))
+                pawnContainer.Remove(p);
+
+            IntVec3 c = this.InteractionCell;
+            if (!c.InBounds(Map) || !c.Standable(Map))
+                c = this.Position;
+
+            // Spawn pawn back so that Kill() yields a corpse in-map (reliable)
+            GenSpawn.Spawn(p, c, Map, WipeMode.Vanish);
+
+        }
 
         // --- Float menu (op machine) ---
         public override IEnumerable<FloatMenuOption> GetFloatMenuOptions(Pawn selPawn)
@@ -174,12 +225,10 @@ namespace RedHotKomet.SurgeryMachine
             foreach (var g in base.GetGizmos())
                 yield return g;
 
-            // Vanilla: selecteer de contained pawn met 1 gizmo
             Gizmo selectGizmo = Building.SelectContainedItemGizmo(this, PawnInside);
             if (selectGizmo != null)
                 yield return selectGizmo;
 
-            // Eject pawn (altijd toegestaan)
             var eject = new Command_Action
             {
                 defaultLabel = "Eject pawn",
@@ -193,7 +242,6 @@ namespace RedHotKomet.SurgeryMachine
 
             yield return eject;
         }
-
 
         // --- Inspect string: toon pawn + items ---
         public override string GetInspectString()
@@ -232,59 +280,19 @@ namespace RedHotKomet.SurgeryMachine
             }
         }
 
-
         public override void Destroy(DestroyMode mode = DestroyMode.Vanish)
         {
-            // Als er een pawn in zit en we gaan contents droppen: eerst stasis verwijderen
-            if (mode != DestroyMode.Vanish && PawnInside != null)
+            // Bij destroy: drop pawn zodat je geen “verdwenen pawn” krijgt
+            if (mode != DestroyMode.Vanish && pawnContainer != null && pawnContainer.Count > 0 && this.Map != null)
             {
-                RemoveStasisIfWeAddedIt(PawnInside);
+                IntVec3 dropSpot = this.InteractionCell;
+                if (!dropSpot.InBounds(this.Map) || !dropSpot.Standable(this.Map))
+                    dropSpot = this.Position;
+
+                pawnContainer.TryDropAll(dropSpot, this.Map, ThingPlaceMode.Near);
             }
 
             base.Destroy(mode);
         }
-
-
-        private HediffDef GetStasisHediffDef()
-        {
-            // Vanilla def name (veilig lookup, geen hard crash als naam ooit anders is)
-            return DefDatabase<HediffDef>.GetNamedSilentFail("Cryptosleep");
-        }
-
-        private void ApplyStasisIfNeeded(Pawn p)
-        {
-            if (p == null) return;
-
-            var def = GetStasisHediffDef();
-            if (def == null) return;
-
-            // Als pawn al in stasis/cryptosleep zat, gaan we het later ook niet verwijderen.
-            if (p.health?.hediffSet?.HasHediff(def) == true)
-            {
-                addedStasisHediffToPawn = false;
-                return;
-            }
-
-            p.health?.AddHediff(def);
-            addedStasisHediffToPawn = true;
-        }
-
-        private void RemoveStasisIfWeAddedIt(Pawn p)
-        {
-            if (p == null) return;
-            if (!addedStasisHediffToPawn) return;
-
-            var def = GetStasisHediffDef();
-            if (def == null) return;
-
-            Hediff h = p.health?.hediffSet?.GetFirstHediffOfDef(def);
-            if (h != null)
-            {
-                p.health.RemoveHediff(h);
-            }
-
-            addedStasisHediffToPawn = false;
-        }
-
     }
 }
